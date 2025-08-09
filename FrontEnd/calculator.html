@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Simple Calculator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      padding: 30px;
+      background: #fff;
+    }
+    .calc {
+      width: 420px;
+    }
+    h1 { text-align: center; margin: 0 0 12px; font-size: 36px; }
+    .display {
+      width: 100%;
+      box-sizing: border-box;
+      height: 48px;
+      font-size: 22px;
+      padding: 6px 10px;
+      margin-bottom: 18px;
+    }
+    .keys {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    button {
+      height: 68px;
+      font-size: 22px;
+      cursor: pointer;
+    }
+    .wide { grid-column: span 2; height: 68px; }
+    .zero { grid-column: span 2; height: 68px; }
+  </style>
+</head>
+<body>
+  <div class="calc" role="application" aria-label="Simple calculator">
+    <h1>Calculator</h1>
+
+    <input id="display" class="display" type="text" value="0" readonly aria-live="polite" />
+
+    <div class="keys" id="keys">
+      <button data-action="clear">C</button>
+      <button data-action="back">⌫</button>
+      <button data-value="(">(</button>
+      <button data-value=")">)</button>
+
+      <button data-value="7">7</button>
+      <button data-value="8">8</button>
+      <button data-value="9">9</button>
+      <button data-value="/">÷</button>
+
+      <button data-value="4">4</button>
+      <button data-value="5">5</button>
+      <button data-value="6">6</button>
+      <button data-value="*">×</button>
+
+      <button data-value="1">1</button>
+      <button data-value="2">2</button>
+      <button data-value="3">3</button>
+      <button data-value="-">−</button>
+
+      <button class="zero" data-value="0">0</button>
+      <button data-value=".">.</button>
+      <button data-value="+">+</button>
+
+      <button data-action="equals" class="wide">=</button>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const display = document.getElementById('display');
+      const keys = document.getElementById('keys');
+
+      const isOperator = ch => ['+', '-', '*', '/'].includes(ch);
+      const setDisplay = txt => (display.value = String(txt));
+      const append = token => {
+        if (display.value === '0' && token !== '.' && !isOperator(token) && token !== '(') {
+          setDisplay(token);
+        } else {
+          setDisplay(display.value + token);
+        }
+      };
+
+      function isSafeExpression(expr) {
+        return /^[0-9+\-*/().\s]+$/.test(expr);
+      }
+
+      function evaluateExpression(expr) {
+        if (!isSafeExpression(expr)) throw new Error('Invalid characters');
+        expr = expr.trim();
+        while (expr.length && isOperator(expr[expr.length - 1])) {
+          expr = expr.slice(0, -1);
+        }
+        if (!expr) return '0';
+        const result = Function('"use strict"; return (' + expr + ')')();
+        if (!isFinite(result)) throw new Error('Math error');
+        if (typeof result === 'number' && !Number.isInteger(result)) {
+          return parseFloat(result.toFixed(12)).toString();
+        }
+        return String(result);
+      }
+
+      // Button handling
+      keys.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        const val = btn.getAttribute('data-value');
+        const action = btn.getAttribute('data-action');
+
+        if (action === 'clear') {
+          setDisplay('0');
+          return;
+        }
+        if (action === 'back') {
+          if (display.value.length > 1) {
+            setDisplay(display.value.slice(0, -1));
+          } else {
+            setDisplay('0');
+          }
+          return;
+        }
+        if (action === 'equals') {
+          try {
+            const res = evaluateExpression(display.value);
+            setDisplay(res);
+          } catch (err) {
+            setDisplay('Error');
+            setTimeout(() => setDisplay('0'), 900);
+          }
+          return;
+        }
+        append(val);
+      });
+
+      window.addEventListener('keydown', (e) => {
+        const allowed = '0123456789+-*/().';
+        if (allowed.includes(e.key)) {
+          e.preventDefault();
+          append(e.key);
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          try {
+            setDisplay(evaluateExpression(display.value));
+          } catch {
+            setDisplay('Error');
+            setTimeout(() => setDisplay('0'), 900);
+          }
+        } else if (e.key === 'Backspace') {
+          e.preventDefault();
+          if (display.value.length > 1) setDisplay(display.value.slice(0, -1));
+          else setDisplay('0');
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          setDisplay('0');
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
